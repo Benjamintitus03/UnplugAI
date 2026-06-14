@@ -1,0 +1,39 @@
+{
+  "name": "ai-blocker-extension",
+  "version": "0.1.0",
+  "description": "Filter AI-generated content from your browser.",
+  "private": true,
+  "scripts": {
+    "build": "webpack --config webpack.config.ts",
+    "build:watch": "webpack --config webpack.config.ts --watch",
+    "build:firefox": "webpack --config webpack.config.ts --env firefox=true",
+    "build:prod": "webpack --config webpack.config.ts --mode production",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/jest": "^29.5.12",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.0",
+    "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "^7.1.2",
+    "html-webpack-plugin": "^5.6.0",
+    "jest": "^29.7.0",
+    "mini-css-extract-plugin": "^2.9.0",
+    "style-loader": "^4.0.0",
+    "ts-jest": "^29.1.4",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "idb": "^8.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  }
+}
