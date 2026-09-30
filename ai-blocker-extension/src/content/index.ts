@@ -1,44 +1,43 @@
-import { ImageScanner } from "./pipeline/image-scanner";
-import { TextScanner } from "./pipeline/text-scanner";
-import { WidgetRemover } from "./pipeline/widget-remover";
-import { ContentMutationObserver } from "./pipeline/mutation-observer";
-import type { UserSettings } from "../shared/types/settings";
-import { DEFAULT_SETTINGS } from "../shared/types/settings";
-import { SETTINGS_STORAGE_KEY } from "../shared/constants";
+import type { BlocklistRules } from "../shared/types/blocklist";
+import { observeImagesInNode } from "./imageProcessor";
+// import { processTextNode } from "./textProcessor"; // Assuming you have something like this
 
-async function loadSettings(): Promise<UserSettings> {
-  const result = await chrome.storage.local.get(SETTINGS_STORAGE_KEY);
-  return (result[SETTINGS_STORAGE_KEY] as UserSettings) ?? DEFAULT_SETTINGS;
+// 1. Load your existing rules (however you currently do it)
+let currentRules: BlocklistRules | null = null;
+
+async function loadRules() {
+    // Replace with your actual rule loading logic
+    currentRules = await chrome.storage.local.get('rules') as BlocklistRules;
 }
 
-async function main(): Promise<void> {
-  const settings = await loadSettings();
-  if (!settings.enabled) return;
+// 2. The Unified DOM Observer
+const domObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+        mutation.addedNodes.forEach(node => {
+            if (node instanceof HTMLElement) {
+                // Route to the new Image Processor
+                observeImagesInNode(node);
+                
+                // Route to your existing Text/Blocklist logic
+                if (currentRules) {
+                    // processTextNode(node, currentRules);
+                }
+            }
+        });
+    }
+});
 
-  // Check allowlist
-  const hostname = location.hostname;
-  const allowlisted = settings.allowlist.some(
-    (entry) => entry.domain === hostname && entry.disableAll,
-  );
-  if (allowlisted) return;
-
-  const imageScanner = new ImageScanner();
-  const widgetRemover = new WidgetRemover();
-  const textScanner = new TextScanner();
-  const mutationObserver = new ContentMutationObserver(imageScanner, widgetRemover);
-
-  if (settings.widgetBlocking.enabled) {
-    widgetRemover.applyOnce();
-  }
-
-  if (settings.imageBlocking.enabled) {
-    await imageScanner.scanAll();
-    mutationObserver.start();
-  }
-
-  if (settings.textBlocking.enabled) {
-    textScanner.scan();
-  }
+// 3. Boot up the extension
+async function init() {
+    await loadRules();
+    
+    // Catch images already on the page before the observer starts
+    document.querySelectorAll('img').forEach(img => observeImagesInNode(img));
+    
+    // Start watching for new elements
+    domObserver.observe(document.body, { childList: true, subtree: true });
+    
+    console.log("[Unplug AI] Content script loaded and observing.");
 }
 
-main().catch(console.error);
+init();
