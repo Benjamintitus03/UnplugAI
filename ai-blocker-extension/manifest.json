@@ -6,10 +6,15 @@
   "permissions": [
     "storage",
     "alarms",
+    "activeTab",
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess"
   ],
-  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.bundle.js"
+  },
+  "host_permissions": 
+  ["<all_urls>", "http://localhost:8000/*"],
   "background": {
     "service_worker": "background/service-worker.js",
     "type": "module"
@@ -34,4 +39,5 @@
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
   }
+  
 }
