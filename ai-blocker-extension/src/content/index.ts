@@ -1,44 +1,30 @@
-import { ImageScanner } from "./pipeline/image-scanner";
-import { TextScanner } from "./pipeline/text-scanner";
-import { WidgetRemover } from "./pipeline/widget-remover";
-import { ContentMutationObserver } from "./pipeline/mutation-observer";
-import type { UserSettings } from "../shared/types/settings";
-import { DEFAULT_SETTINGS } from "../shared/types/settings";
-import { SETTINGS_STORAGE_KEY } from "../shared/constants";
+const API_URL = "http://localhost:8000/api/v1/analyze/image";
 
-async function loadSettings(): Promise<UserSettings> {
-  const result = await chrome.storage.local.get(SETTINGS_STORAGE_KEY);
-  return (result[SETTINGS_STORAGE_KEY] as UserSettings) ?? DEFAULT_SETTINGS;
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'ANALYZE_IMAGE' && request.payload) {
+        processImage(request.payload)
+            .then(data => sendResponse(data))
+            .catch(err => {
+                console.error("[UnplugAI] API Error:", err);
+                sendResponse({ error: true });
+            });
+        return true; // Keep message channel open for async response
+    }
+});
+
+async function processImage(imageUrl: string) {
+    // Fetch the image as a blob to send as multipart/form-data
+    const imgRes = await fetch(imageUrl);
+    const blob = await imgRes.blob();
+
+    const formData = new FormData();
+    formData.append("file", blob, "image.jpg");
+
+    const response = await fetch(API_URL, {
+        method: "POST",
+        body: formData
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+    return await response.json();
 }
-
-async function main(): Promise<void> {
-  const settings = await loadSettings();
-  if (!settings.enabled) return;
-
-  // Check allowlist
-  const hostname = location.hostname;
-  const allowlisted = settings.allowlist.some(
-    (entry) => entry.domain === hostname && entry.disableAll,
-  );
-  if (allowlisted) return;
-
-  const imageScanner = new ImageScanner();
-  const widgetRemover = new WidgetRemover();
-  const textScanner = new TextScanner();
-  const mutationObserver = new ContentMutationObserver(imageScanner, widgetRemover);
-
-  if (settings.widgetBlocking.enabled) {
-    widgetRemover.applyOnce();
-  }
-
-  if (settings.imageBlocking.enabled) {
-    await imageScanner.scanAll();
-    mutationObserver.start();
-  }
-
-  if (settings.textBlocking.enabled) {
-    textScanner.scan();
-  }
-}
-
-main().catch(console.error);
